@@ -1,0 +1,76 @@
+Relatório do Trabalho 1 de POO
+
+
+Como utilizar :
+
+	O trabalho foi divido em 2 pacotes java: um para cada parte do trabalho, o compilador e a maquina virtual. Para compilar programas EXPR deve-se chamar da linha de comando:
+ “java compiladorexpr/Main arquivo_src arquivo_saida”
+ 
+“arquivo_src” e “arquivo_saida” representam respectivamente os caminhos completos dos arquivos fonte e binario (bytecode).
+
+Para executar os programas deve-se chamar da linha de comando:
+“java maquinavirtualexpr/Main programa_1 programa_2 ...”
+
+“programa_1”, “programa_2”, “programa_n” representam os arquivos binários (bytecode) dos programas a serem executados na ordem em que aparecerem. 
+
+A maquina virtual “perguntará” ao usuário os parâmetros a serem passados para o primeiro programa, e ao final da execução de todos os programas mostrará na tela os resultados retornados pelo último programa. Os resultados do primeiro programa e dos programas intermediários serão passados como parâmetros para o programa que for executado em seguida.
+
+Como foi implementado:
+
+1. Maquina Virtual
+	Projetei a máquina virtual de forma mais genérica e, ao mesmo tempo, simples possível. A máquina possui 4 estruturas de memória:
+	a) um acumulador: posicao unica de memoria contendo 1 double.
+	b) vetor de variaveis
+	c) vetor de parâmteros
+	d) vetor de valores de retorno
+	
+	Os 3 vetores tem tamanho fixo, definido em tempo de compilação do trabalho. Deixei com 100 posições, mas o trabalho pode ser recompilado para ocupar tanta memória quanto a JVM fornecer.
+
+	Segue a lista de instuções que a máquina é capaz de executar com os respectivos bytecodes. Note que não procurei fazer os bytecodes compactos, pois não torna o projeto didático tampouco simples de depurar.
+	
+
+- Carrega acumulador com valor:
+	6 bytes:
+		'<', seguido de 'p', 'v', 'r' ou 'c', seguido de 4 bytes representando o indice do parametro, variavel, valor de retorno ou o valor da constante (int64, byte mais significativo no maior endereço)
+		
+
+- Copia o valor do acumulador para variavel ou valor de retorno
+	6 bytes:
+	'>', seguido de 'v' ou 'r', seguido de 4 bytes com o indice da variavel ou valor de retorno
+
+
+- Operacao com o acumulador, resultado indo para o acumulador
+	6 bytes:
+	'+', '-', '*', '/', seguido de 'p', 'v', 'r', ou 'c', seguido de 4 bytes representando o indice do parametro, variavel, valor de retorno ou o valor da constante (int64)
+
+
+- Salto codicional a operando maior que zero:
+	
+	10 bytes:
+	'?', seguido de 'p', 'v', ou 'r', seguido de 4 bytes representando o indice do parametro, variavel, ou valor de retorno, seguido de 4 bytes com o endereço de destino.
+
+Para implementar estas instuções foi criada uma árvore de classes:
+
+	-Instrucao
+		- InstrucaoComAcum
+			- InstrucaoOperaAcum
+				- InstrucaoSomaAcum
+				- InstrucaoSubtraiAcum
+				- InstrucaoMultiplicaAcum
+				- InstrucaoDivideAcum
+			- InstrucaoCarregaAcum
+			- InstrucaoCopiaAcum
+		- InstrucaoSaltoCondicional
+
+As classes em itálico representam classes abstratas.
+
+A máquina virtual funciona da seguinte forma:
+	Ela começa lendo sequencialmente os bytes do programa. Ao ler o primeiro byte ela chama uma função estática da classe Instrucao que é capaz de decodificar que instrução está escrita naquele endereço e chama o construtor da classe correspondente àquela instrução devolvendo o objeto criado.
+	A máquina então chama o método Executa do objeto criado, passando para ele uma referência ao objeto MaquinaVirtual na qual aquela instrução será executada (a classe MaquinaVirtual disponibiliza publicamente métodos/funções que são capazes de alterar/retornar os valores dos “registradores” na máquina virtual.
+
+	A máquina virtual é facilmente estendida criando-se novas instruções que herdem de alguma classe da árvore mostrada acima. Ao se ler o código nota-se que isso é algo trivial.
+
+
+2. Compilador:
+	O projeto do compilador segue uma linha parecida com a máquina virtual. 
+A linguagem proposta possui apenas 2 tipos de estruturas sintáticas que aqui e no código chamo de comandos: atribuição e salto condicional. Criei uma classe abstrata  chamada Comando que reune as características comuns a todos os comandos. Nela existe uma função abstrata getByteCode() que deve ser implementada por classes derivadas dela. Para esta linguagem, implementei duas classes derivadas: ComandoAtribuicao e ComandoSaltoCondicional. Cada uma é capaz de ler uma linha de comando apropriada e transformar o código EXPR num conjunto de instruções  representadas por seus bytecodes. 
